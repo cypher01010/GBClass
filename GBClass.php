@@ -147,7 +147,7 @@ class GBClass
     public function listing($directory='/', $content='')
 	{
 		if($this->_token===null){
-			$this->auth();			
+			$this->auth();
 		}
 		switch($content){
 			case self::OBJECTS:
@@ -221,7 +221,7 @@ class GBClass
 	 * @param $directory The directory
      * @return Headers
 	 */ 
-    public function putObject($object, $directory='/')
+    public function putObject($object, $directory='/', $targetNode=null)
 	{
 		if($this->_token===null){
 			$this->auth();
@@ -231,6 +231,7 @@ class GBClass
 		$this->_object=$object;
 		$this->_headers=array();
 		$this->_headers[]='X-Auth-Token: ' . $this->_token;
+        if($targetNode!==null || (!empty($targetNode))) $this->_headers[]='X-Target-Node: ' . $targetNode;
 		$data=$this->execute("PUT", true);
 		return $data['headers'];
 	}
