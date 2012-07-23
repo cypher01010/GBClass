@@ -219,9 +219,10 @@ class GBClass
 	 * 
 	 * @param $object Contains the data of $_FILES['object']
 	 * @param $directory The directory
+     * @param $targetNodeId The target node id for object to upload
      * @return Headers
 	 */ 
-    public function putObject($object, $directory='/', $targetNode=null)
+    public function putObject($object, $directory='/', $targetNodeId=null)
 	{
 		if($this->_token===null){
 			$this->auth();
@@ -231,7 +232,7 @@ class GBClass
 		$this->_object=$object;
 		$this->_headers=array();
 		$this->_headers[]='X-Auth-Token: ' . $this->_token;
-        if($targetNode!==null || (!empty($targetNode))) $this->_headers[]='X-Target-Node: ' . $targetNode;
+        if($targetNodeId!==null || (!empty($targetNodeId))) $this->_headers[]='X-Target-Node: ' . $targetNodeId;
 		$data=$this->execute("PUT", true);
 		return $data['headers'];
 	}
