@@ -310,7 +310,18 @@ class GBClass
 		$data=$this->execute("PUT", true);
 		return $data['headers'];
 	}
-     
+    /**
+     * Downloading an Object
+     * 
+     * <pre>
+     * $gbClass=new GBClass('Application ID', 'Application Key');
+     * $gbClass->moveObject('MyObjectName.extension', '/this/is/the/source/');
+     * 
+     * @name $name The object name to download
+     * @name $source The source location of an object to download
+     * @return Object Content
+     * </pre>     
+     */ 
     public function downloadObject($name, $source)
     {
         if($this->_token===null){
