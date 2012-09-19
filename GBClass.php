@@ -4,7 +4,7 @@
  * 
  * Copyright (C), API IO LLC - Singapore @link <http://www.ape.io>
  * 
- * @author Erson G. Puyos <erson.puyos@gmail.com> / <erson@ape.io>
+ * @author Erson G. Puyos <erson.puyos@gmail.com>
  * 
  * Permission is hereby granted, free of charge, to any person obtaining 
  * a copy of this software and associated documentation files (the "Software"), 
@@ -309,7 +309,30 @@ class GBClass
 		$this->_headers[]='X-Copy-From: ' . $this->_appid . '/' . urlencode($this->cleanDirectory($source) . $name);
 		$data=$this->execute("PUT", true);
 		return $data['headers'];
-	}	
+	}
+    /**
+     * Downloading an Object
+     * 
+     * <pre>
+     * $gbClass=new GBClass('Application ID', 'Application Key');
+     * $gbClass->moveObject('MyObjectName.extension', '/this/is/the/source/');
+     * 
+     * @name $name The object name to download
+     * @name $source The source location of an object to download
+     * @return Object Content
+     * </pre>     
+     */ 
+    public function downloadObject($name, $source)
+    {
+        if($this->_token===null){
+            $this->auth();
+        }
+        $this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/' . $this->_appid . '/' . urlencode($this->cleanDirectory($source) . $name);
+        $this->_headers=array();
+		$this->_headers[]='X-Auth-Token: ' . $this->_token;
+        $data=$this->execute("GET");
+        return $data;
+    }
 	
 	private function setAuthData($appid, $appkey)
     {
