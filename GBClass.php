@@ -56,7 +56,7 @@ class GBClass
 	public function __construct($appid, $appkey)
 	{
 		if($appid==='' || $appid==null){
-			die('Application Id cannot be empty.');		
+			die('Application Id cannot be empty.');
 		}elseif($appkey==='' || $appkey===null){
 			die('Application Key cannot be empty.');
 		}else{
@@ -81,7 +81,7 @@ class GBClass
 	* 
 	* <pre>
 	* $gbClass=new GBClass('Application ID', 'Application Key');
-	* $gbClass->format=[json/xml];
+	* $gbClass->format='json OR xml';
 	* $gbClass->info();
 	* </pre>
 	* 
@@ -90,8 +90,9 @@ class GBClass
 	public function info()
 	{
 		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version;
+		$this->_headers=array();
 		$this->_headers[]='Content-Type: application/' . $this->format;		
-		return $this->execute('GET');
+		return $this->execute("GET");
 	}
 	/**
 	* Get the list of nodes of GRIDBLAZE
@@ -99,7 +100,7 @@ class GBClass
 	* <pre>
 	* $id='ServerId';
 	* $gbClass=new GBClass('Application ID', 'Application Key');
-	* $gbClass->format=[json/xml];
+	* $gbClass->format='json OR xml';
 	* $gbClass->node($id);
 	* </pre>
 	* 
@@ -109,8 +110,9 @@ class GBClass
 	public function node($id='')
 	{
 		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/node/' . $id;
+		$this->_headers=array();
 		$this->_headers[]='Content-Type: application/' . $this->format;
-		return $this->execute('GET');
+		return $this->execute("GET");
 	}
 	/**
 	* Authentication to GRIDBLAZE API
@@ -127,7 +129,7 @@ class GBClass
 			$this->_headers=array();
 			$this->_headers[]='X-Auth-User: ' . $this->_appid;
 			$this->_headers[]='X-Auth-Key: ' . $this->_appkey;
-			$data=$this->execute('GET', true);
+			$data=$this->execute("GET", true);
 			if($this->_token===null) $this->_token=$data['headers']['X-Auth-Token'];
 		}
 	}
@@ -136,7 +138,7 @@ class GBClass
 	* 
 	* <pre>
 	* $gbClass=new GBClass('Application ID', 'Application Key');
-	* $gbClass->format=[json/xml];	
+	* $gbClass->format='json OR xml';	
 	* $gbClass->listing('/this/is/the/location/', '');
 	* </pre>
 	* 
@@ -149,17 +151,10 @@ class GBClass
 		if($this->_token===null){
 			$this->auth();
 		}
-		switch($content){
-			case self::OBJECTS:
-				return $this->getListObject($directory);
-				break;
-			case self::DIRECTORIES:
-				return $this->getListDirectory($directory);
-				break;
-			default:
-				return $this->getAllList($directory);
-				break;
-		}
+		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/' . $this->_appid . '?format=' . $this->format . '&prefix=' . urlencode($this->cleanDirectory($directory)) . '&data=' . $content;        
+		$this->_headers=array();
+		$this->_headers[]='X-Auth-Token: ' . $this->_token;
+		return $this->execute('GET');
 	}
 	/**
 	* Deleting a directory
@@ -176,7 +171,7 @@ class GBClass
 	public function deleteDirectory($name, $directory='/')
 	{
 		if($this->_token===null){
-			$this->auth();			
+			$this->auth();
 		}
 		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/' . $this->_appid . '/' . urlencode($this->cleanDirectory($directory) . $name);
 		$this->_headers=array();
@@ -199,7 +194,7 @@ class GBClass
 	public function createDirectory($name, $directory='/')
 	{
 		if($this->_token===null){
-			$this->auth();			
+			$this->auth();
 		}
 		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/' . $this->_appid . '/' . urlencode($this->cleanDirectory($directory) . $name);
 		$this->_action=self::DIRECTORIES;
@@ -315,7 +310,7 @@ class GBClass
 	* 
 	* <pre>
 	* $gbClass=new GBClass('Application ID', 'Application Key');
-	* $gbClass->moveObject('MyObjectName.extension', '/this/is/the/source/');
+	* $gbClass->downloadObject('MyObjectName.extension', '/this/is/the/source/');
 	* 
 	* @name $name The object name to download
 	* @name $source The source location of an object to download
@@ -333,19 +328,216 @@ class GBClass
 		$data=$this->execute("GET");
 		return $data;
 	}
-
+	/**
+	* Get the metadata of an object
+	*
+	* <pre>
+	* $gbClass=new GBClass('Application ID', 'Application Key');
+	* $gbClass->objectMetadata('MyObjectName.extension', '/this/is/the/location/'); 
+	*
+	* @name $name The object name
+	* @name $directory The directory
+	* @return Array of metadata
+	* </pre>
+	*/
+	public function objectMetadata($name, $directory)
+	{
+		if($this->_token===null){
+			$this->auth();
+		}
+		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/' . $this->_appid . '/' . urlencode($this->cleanDirectory($directory) . $name);
+		$this->_headers=array();
+		$this->_headers[]='X-Auth-Token: ' . $this->_token;
+		$data=$this->execute("HEAD", true);
+		$headers=$data['headers'];
+		$metadata=array();
+		foreach($headers as $key=>$val){
+			if(strpos($key, 'X-Object-Meta')!==false) $metadata[$key]=$val;
+		}
+		return $metadata;
+	}
+	/**
+	* Get the storage usage with date specified
+	*
+	* <pre>
+	* $gbClass=new GBClass('Application ID', 'Application Key');
+	* $gbClass->format='json OR xml';
+	* $to=date('Y-m-d');
+	* $from=date('Y-m-d', strtotime(date('Y-m-d', strtotime($to)) . "-7 day"));
+	* $gbClass->graphStorageUsage($from, $to);
+	*
+	* @name $from Start date to pull the record
+	* @name $to End date to pull the record
+	* @return json | xml Record
+	* </pre>
+	*/
+	public function graphStorageUsage($from, $to)
+	{
+		if($this->_token===null){
+			$this->auth();
+		}
+		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/' . $this->_appid . '/storage/usage/';
+		$this->_headers=array();
+		$this->_headers[]='X-Auth-Token: ' . $this->_token;
+		$this->_headers[]='X-Graph-From: ' . $from;
+		$this->_headers[]='X-Graph-To: ' . $to;
+		$this->_headers[]='Content-Type: application/' . $this->format;
+		$data=$this->execute("GET");
+		return $data;
+	}
+	/**
+	* Get the bandwidth utilized with date specified
+	*
+	* <pre>
+	* $gbClass=new GBClass('Application ID', 'Application Key');
+	* $gbClass->format='json OR xml';
+	* $to=date('Y-m-d');
+	* $from=date('Y-m-d', strtotime(date('Y-m-d', strtotime($to)) . "-7 day"));
+	* $gbClass->graphBandwidthUtilized($from, $to);
+	*
+	* @name $from Start date to pull the record
+	* @name $to End date to pull the record
+	* @return json | xml Record
+	* </pre>
+	*/
+	public function graphBandwidthUtilized($from, $to)
+	{
+		if($this->_token===null){
+			$this->auth();
+		}
+		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/' . $this->_appid . '/bandwidth/utilized/';			
+		$this->_headers=array();
+		$this->_headers[]='X-Auth-Token: ' . $this->_token;
+		$this->_headers[]='X-Graph-From: ' . $from;
+		$this->_headers[]='X-Graph-To: ' . $to;
+		$this->_headers[]='Content-Type: application/' . $this->format;
+		$data=$this->execute("GET");
+		return $data;		
+	}
+	/**
+	* Get the http requests with date specified
+	*
+	* <pre>
+	* $gbClass=new GBClass('Application ID', 'Application Key');
+	* $gbClass->format='json OR xml';
+	* $to=date('Y-m-d');
+	* $from=date('Y-m-d', strtotime(date('Y-m-d', strtotime($to)) . "-7 day"));
+	* $gbClass->graphHttpRequests($from, $to);
+	*
+	* @name $from Start date to pull the record
+	* @name $to End date to pull the record
+	* @return json | xml Record
+	* </pre>
+	*/
+	public function graphHttpRequests($from, $to)
+	{
+		if($this->_token===null){
+			$this->auth();
+		}
+		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/' . $this->_appid . '/http/requests/';
+		$this->_headers=array();
+		$this->_headers[]='X-Auth-Token: ' . $this->_token;
+		$this->_headers[]='X-Graph-From: ' . $from;
+		$this->_headers[]='X-Graph-To: ' . $to;
+		$this->_headers[]='Content-Type: application/' . $this->format;
+		$data=$this->execute("GET");
+		return $data;
+	}
+	/**
+	* Get the number of objects stored each day with date specified
+	*
+	* <pre>
+	* $gbClass=new GBClass('Application ID', 'Application Key');
+	* $gbClass->format='json OR xml';
+	* $to=date('Y-m-d');
+	* $from=date('Y-m-d', strtotime(date('Y-m-d', strtotime($to)) . "-7 day"));
+	* $gbClass->graphObjectsStored($from, $to);
+	*
+	* @name $from Start date to pull the record
+	* @name $to End date to pull the record
+	* @return json | xml Record
+	* </pre>
+	*/
+	public function graphObjectsStored($from, $to)
+	{
+		if($this->_token===null){
+			$this->auth();
+		}
+		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/' . $this->_appid . '/objects/stored/';
+		$this->_headers=array();
+		$this->_headers[]='X-Auth-Token: ' . $this->_token;
+		$this->_headers[]='X-Graph-From: ' . $from;
+		$this->_headers[]='X-Graph-To: ' . $to;
+		$this->_headers[]='Content-Type: application/' . $this->format;
+		$data=$this->execute("GET");
+		return $data;
+	}
+	/**
+	* Create html form upload
+	*
+	* <pre>
+	* $gbClass=new GBClass('Application ID', 'Application Key');
+	* $gbClass->format='json OR xml';
+	* $to=date('Y-m-d');
+	* $from=date('Y-m-d', strtotime(date('Y-m-d', strtotime($to)) . "-7 day"));
+	* $gbClass->uploadForm();
+	*
+	* @return html form upload
+	* </pre>
+	*/
+	public function uploadForm($returnUrl, $datetime, $directory='/', $options='default', $meta=array(), $enableAuth='no')
+	{
+		if(count($meta)==0){
+			$meta=array(
+				'uploaded_from'=>'GBClass',
+				'upload_date'=>date('Y-m-d', $datetime),
+			);
+		}
+		$meta=json_encode($meta);
+		$signature=$this->signature($returnUrl, $datetime, $directory, $options, $meta);
+		$meta=urlencode($meta);        
+		$form=<<<FORM
+		<form action='http://upload.gridblaze.com' enctype='multipart/form-data' method='post'>
+			<input type="file" name="file">                
+			<input id="appid"       type="hidden"  name="appid"       value="$this->_appid" />
+			<input id="enable_auth" type="hidden"  name="enable_auth" value="$enableAuth" />
+			<input id="return_url"  type="hidden"  name="return_url"  value="$returnUrl" />
+			<input id="directory"   type="hidden"  name="directory"   value="$directory" />
+			<input id="options"     type="hidden"  name="options"     value="$options" />
+			<input id="meta"        type="hidden"  name="meta"        value="$meta" />
+			<input id="datetime"    type="hidden"  name="datetime"    value="$datetime" />
+			<input id="signature"   type="hidden"  name="signature"   value="$signature" />
+			<input type="submit" name="upload" value="submit">
+		</form>
+FORM;
+		return $form;
+	}
+	/**
+	* Generate signature for file upload
+	*
+	* <pre>
+	* $gbClass=new GBClass('Application ID', 'Application Key');
+	* $gbClass->signature();
+	*
+	* @return hash signature for file upload
+	* </pre>
+	*/
+	public function signature($returnUrl, $datetime, $directory='/', $options='default', $meta='')
+	{
+		return hash('sha256', $this->_appid.$this->_appkey.$returnUrl.$directory.$datetime.$options.$meta);
+	}
 	private function setAuthData($appid, $appkey)
 	{
 		$this->_appid=$appid;
 		$this->_appkey=$appkey;
 	}
-	private function execute($verb, $headers=false)
+	private function execute($verb, $displayHeaders=false)
 	{
 		$ch=curl_init();
 		curl_setopt($ch, CURLOPT_URL, $this->_url);
 		curl_setopt($ch, CURLOPT_USERAGENT, 'GBClass');
 		curl_setopt($ch, CURLOPT_HTTPHEADER, $this->_headers);
-		curl_setopt($ch, CURLOPT_HEADER, $headers);
+		curl_setopt($ch, CURLOPT_HEADER, $displayHeaders);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		if($this->_protocol==='https://'){
 			curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
@@ -373,10 +565,13 @@ class GBClass
 					curl_setopt($ch, CURLOPT_VERBOSE, true);
 				}
 				break;
+			case "HEAD":
+				curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $verb);
+				break;
 		}
 		$response=curl_exec($ch);
 		curl_close($ch);
-		if($headers){
+		if($displayHeaders){
 			return $this->raws($response);
 		}else{
 			return $response;
@@ -415,26 +610,5 @@ class GBClass
 		$directory=str_replace(' ', '_', $directory);
 		$directory=substr($directory, 1);		
 		return $directory;
-	}
-	private function getAllList($directory='/')
-	{
-		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/' . $this->_appid . '?format=' . $this->format . '&prefix=' . urlencode($this->cleanDirectory($directory)) . '&data=';
-		$this->_headers=array();
-		$this->_headers[]='X-Auth-Token: ' . $this->_token;
-		return $this->execute('GET');
-	}
-	private function getListObject($directory='/')
-	{
-		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/' . $this->_appid . '?format=' . $this->format . '&prefix=' . urlencode($this->cleanDirectory($directory)) . '&data=' . self::OBJECTS;
-		$this->_headers=array();
-		$this->_headers[]='X-Auth-Token: ' . $this->_token;
-		return $this->execute('GET');
-	}
-	private function getListDirectory($directory='/')
-	{
-		$this->_url=$this->_protocol . $this->_host . '/' . $this->_version . '/' . $this->_appid . '?format=' . $this->format . '&prefix=' . urlencode($this->cleanDirectory($directory)) . '&data=' . self::DIRECTORIES;
-		$this->_headers=array();
-		$this->_headers[]='X-Auth-Token: ' . $this->_token;
-		return $this->execute('GET');
 	}
 }
