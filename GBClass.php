@@ -24,7 +24,7 @@
 * THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 /**
-* GBClass SDK is a helper class providing you to curl the GRIDBLAZE API easily.
+* GBClass SDK - a simple class that interface the GRIDBLAZE API
 */
 class GBClass
 {
