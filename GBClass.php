@@ -315,7 +315,7 @@ class GBClass
 	* 
 	* <pre>
 	* $gbClass=new GBClass('Application ID', 'Application Key');
-	* $gbClass->downloadObject('MyObjectName.extension', '/this/is/the/source/');
+	* $gbClass->downloadObject('node id', 'MyObjectName.extension', '/this/is/the/source/', true);
 	* </pre>
 	* 
 	* @name $nodeid The object node id
